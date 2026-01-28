@@ -245,9 +245,9 @@ def get_vision_prediction(image):
                 else:
                     severity = "info"
                 
-                # Return bounding boxes from Florence-2
-                print(f"[Florence-2] Detected: {defect_type}, Confidence: {confidence}%, Bboxes: {len(bboxes.get('bboxes', []))}")
-                return defect_type, confidence, severity, bboxes
+                # Return bounding boxes and description from Florence-2
+                print(f"[Florence-2] Detected: {defect_type}, Confidence: {confidence}%, Description: {description}")
+                return defect_type, confidence, severity, bboxes, description
         except Exception as e:
             print(f"[ERROR] Florence-2 error: {e}")
     
@@ -290,12 +290,12 @@ def get_vision_prediction(image):
             else:
                 severity = "info"
             
-            # Keras doesn't provide bounding boxes
-            return prediction, confidence, severity, None
+            # Keras doesn't provide bounding boxes or detailed description
+            return prediction, confidence, severity, None, None
         except Exception as e:
-            return None, None, f"Vision error: {str(e)}", None
+            return None, None, f"Vision error: {str(e)}", None, None
     
-    return None, None, "No vision model available", None
+    return None, None, "No vision model available", None, None
 
 def combine_predictions(sensor_risk, vision_severity, vision_defect, vision_confidence, temp, moisture):
     """Combine sensor and vision predictions safely"""
@@ -390,27 +390,31 @@ def predict_image():
         # 3. Get Predictions
         temp, moist = simulate_sensor_data()
         s_risk, s_msg = get_sensor_prediction(temp, moist)
-        v_defect, v_conf, v_sev, florence_bboxes = get_vision_prediction(img)
+        v_defect, v_conf, v_sev, florence_bboxes, florence_desc = get_vision_prediction(img)
         
         # Convert Florence-2 bounding boxes to format compatible with frontend
         gemini_result = None
-        if florence_bboxes and 'bboxes' in florence_bboxes and len(florence_bboxes['bboxes']) > 0:
-            # Get first bounding box and convert to percentage format
-            bbox = florence_bboxes['bboxes'][0]
-            img_width, img_height = img.size
-            
+        if florence_bboxes or florence_desc:  # Check if we have Florence-2 data (bboxes or description)
             gemini_result = {
                 'problem': v_defect,
                 'confidence': v_conf / 100.0,  # Convert to 0-1 range
-                'location': {
+                'description': florence_desc if florence_desc else f"Florence-2 detected {v_defect} with {v_conf:.1f}% confidence"
+            }
+            
+            # Add location if available
+            if florence_bboxes and 'bboxes' in florence_bboxes and len(florence_bboxes['bboxes']) > 0:
+                # Get first bounding box and convert to percentage format
+                bbox = florence_bboxes['bboxes'][0]
+                img_width, img_height = img.size
+                
+                gemini_result['location'] = {
                     'x': bbox[0] / img_width,
                     'y': bbox[1] / img_height,
                     'width': (bbox[2] - bbox[0]) / img_width,
                     'height': (bbox[3] - bbox[1]) / img_height
-                },
-                'description': f"Florence-2 detected {v_defect} with {v_conf:.1f}% confidence"
-            }
-            print(f"[Florence-2] Converted bbox to frontend format: {gemini_result}")
+                }
+            
+            print(f"[Florence-2] Generated frontend result: {gemini_result}")
         
         
         # 4. Gemini is disabled (regional quota issue)

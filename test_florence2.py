@@ -2,6 +2,15 @@
 Test Florence-2 model loading independently
 """
 import sys
+from types import ModuleType
+from unittest.mock import MagicMock
+
+# Mock flash_attn because it's hard to install on Windows but we don't need it for CPU/eager mode
+# We use ModuleType and set __spec__ to satisfy importlib checks
+m = ModuleType('flash_attn')
+m.__spec__ = MagicMock()
+sys.modules['flash_attn'] = m
+
 print("Testing Florence-2...")
 
 try:
@@ -43,8 +52,30 @@ try:
     print(f"[INFO] Model type: {type(model)}")
     print(f"[INFO] Processor type: {type(processor)}")
     
+    # Test Inference with dummy image
+    print("\n[INFO] Testing inference with dummy image...")
+    from PIL import Image
+    import numpy as np
+    
+    # Create black image
+    dummy_image = Image.fromarray(np.zeros((100, 100, 3), dtype=np.uint8))
+    
+    prompt = "<MORE_DETAILED_CAPTION>"
+    inputs = processor(text=prompt, images=dummy_image, return_tensors="pt").to(device)
+    
+    generated_ids = model.generate(
+        input_ids=inputs["input_ids"],
+        pixel_values=inputs["pixel_values"],
+        max_new_tokens=50,
+        do_sample=False,
+        num_beams=3,
+    )
+    
+    result_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+    print(f"[SUCCESS] Inference result: {result_text}")
+    
 except Exception as e:
-    print(f"[ERROR] Florence-2 loading failed: {e}")
+    print(f"[ERROR] Florence-2 loading/inference failed: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)

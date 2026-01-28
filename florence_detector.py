@@ -4,6 +4,16 @@ Advanced vision model for concrete/structural defect detection
 No training required - works out of the box
 """
 
+import sys
+from types import ModuleType
+from unittest.mock import MagicMock
+
+# Mock flash_attn because it's hard to install on Windows but we don't need it for CPU/eager mode
+# We use ModuleType and set __spec__ to satisfy importlib checks
+m = ModuleType('flash_attn')
+m.__spec__ = MagicMock()
+sys.modules['flash_attn'] = m
+
 import torch
 from transformers import AutoProcessor, AutoModelForCausalLM
 from PIL import Image, ImageDraw, ImageFont
