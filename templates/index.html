@@ -7,6 +7,7 @@
     <title>SafeHome - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -190,156 +191,230 @@
                             </div>
                         </div>
                     </div>
-                    {% endif %}
-
                 </div>
 
-                <!-- Info Cards -->
-                <div class="grid md:grid-cols-2 gap-6 mt-8">
-                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="bg-blue-500 w-10 h-10 rounded-lg flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                                    </path>
-                                </svg>
-                            </div>
-                            <h3 class="text-white font-bold">Sensor Analysis</h3>
-                        </div>
-                        <p class="text-white/70 text-sm">Environmental data automatically analyzed for corrosion risk
-                        </p>
-                    </div>
-
-                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="bg-purple-500 w-10 h-10 rounded-lg flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
-                                    </path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-white font-bold">Computer Vision</h3>
-                        </div>
-                        <p class="text-white/70 text-sm">Deep learning CNN detects cracks, spalling, and defects</p>
+                <!-- Risk Analysis Chart -->
+                {% if result.risk_analysis %}
+                <div class="mt-8 bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-gray-200">
+                    <h3 class="text-gray-800 font-bold text-lg mb-4 text-center">Risk Analysis Breakdown</h3>
+                    <div class="relative h-64 w-full">
+                        <canvas id="riskChart"></canvas>
                     </div>
                 </div>
+                {% endif %}
+
+                {% endif %}
+
             </div>
 
+            <!-- Info Cards -->
+            <div class="grid md:grid-cols-2 gap-6 mt-8">
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-blue-500 w-10 h-10 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-white font-bold">Sensor Analysis</h3>
+                    </div>
+                    <p class="text-white/70 text-sm">Environmental data automatically analyzed for corrosion risk
+                    </p>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-purple-500 w-10 h-10 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                                </path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-white font-bold">Computer Vision</h3>
+                    </div>
+                    <p class="text-white/70 text-sm">Deep learning CNN detects cracks, spalling, and defects</p>
+                </div>
+            </div>
         </div>
 
-        <!-- Footer -->
-        <footer class="text-center py-8 text-white/60 text-sm">
-            <p>Powered by TensorFlow & Scikit-Learn</p>
-        </footer>
+    </div>
 
-        <!-- JavaScript for Image Preview -->
-        <script>
-            const fileInput = document.getElementById('fileInput');
-            const uploadPrompt = document.getElementById('uploadPrompt');
-            const imagePreview = document.getElementById('imagePreview');
-            const previewImg = document.getElementById('previewImg');
-            const fileName = document.getElementById('fileName');
+    <!-- Footer -->
+    <footer class="text-center py-8 text-white/60 text-sm">
+        <p>Powered by TensorFlow & Scikit-Learn</p>
+    </footer>
 
-            fileInput.addEventListener('change', function (e) {
-                const file = e.target.files[0];
+    <!-- JavaScript for Image Preview -->
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const fileName = document.getElementById('fileName');
 
-                if (file) {
-                    // Validate file type
-                    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/bmp', 'image/gif'];
-                    if (!validTypes.includes(file.type)) {
-                        alert('Please select a valid image file (PNG, JPG, JPEG, BMP, GIF)');
-                        fileInput.value = '';
-                        return;
-                    }
+        fileInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
 
-                    // Validate file size (16MB max)
-                    const maxSize = 16 * 1024 * 1024; // 16MB in bytes
-                    if (file.size > maxSize) {
-                        alert('File size must be less than 16MB');
-                        fileInput.value = '';
-                        return;
-                    }
-
-                    // Show preview
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        previewImg.src = e.target.result;
-                        fileName.textContent = file.name;
-                        uploadPrompt.classList.add('hidden');
-                        imagePreview.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    // Reset to default state
-                    uploadPrompt.classList.remove('hidden');
-                    imagePreview.classList.add('hidden');
+            if (file) {
+                // Validate file type
+                const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/bmp', 'image/gif'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a valid image file (PNG, JPG, JPEG, BMP, GIF)');
+                    fileInput.value = '';
+                    return;
                 }
-            });
-        </script>
 
-        <!-- Bounding Box Drawing Script -->
-        <script>
-            function drawBoundingBox() {
-                const canvas = document.getElementById('boundingBoxCanvas');
-                const img = document.getElementById('analyzedImage');
+                // Validate file size (16MB max)
+                const maxSize = 16 * 1024 * 1024; // 16MB in bytes
+                if (file.size > maxSize) {
+                    alert('File size must be less than 16MB');
+                    fileInput.value = '';
+                    return;
+                }
 
-                if (!canvas || !img) return;
-
-                // Set canvas size to match image
-                canvas.width = img.offsetWidth;
-                canvas.height = img.offsetHeight;
-
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // Get Gemini data from template
-                {% if gemini_data and gemini_data.location %}
-                const location = {{ gemini_data.location | tojson
-            }};
-            const problem = "{{ gemini_data.problem }}";
-            const confidence = {{ gemini_data.confidence }};
-
-            // Check if location is valid (not all zeros)
-            if (location.x > 0 || location.y > 0 || location.width > 0 || location.height > 0) {
-                // Convert percentages to pixels
-                const x = location.x * canvas.width;
-                const y = location.y * canvas.height;
-                const width = location.width * canvas.width;
-                const height = location.height * canvas.height;
-
-                // Draw red rectangle
-                ctx.strokeStyle = '#EF4444';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(x, y, width, height);
-
-                // Draw semi-transparent fill
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
-                ctx.fillRect(x, y, width, height);
-
-                // Draw label background
-                const labelText = `${problem} (${(confidence * 100).toFixed(0)}%)`;
-                ctx.font = 'bold 14px Arial';
-                const textWidth = ctx.measureText(labelText).width;
-                const labelX = x;
-                const labelY = y > 25 ? y - 5 : y + height + 20;
-
-                ctx.fillStyle = '#EF4444';
-                ctx.fillRect(labelX, labelY - 18, textWidth + 10, 22);
-
-                // Draw label text
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillText(labelText, labelX + 5, labelY - 3);
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImg.src = e.target.result;
+                    fileName.textContent = file.name;
+                    uploadPrompt.classList.add('hidden');
+                    imagePreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Reset to default state
+                uploadPrompt.classList.remove('hidden');
+                imagePreview.classList.add('hidden');
             }
-            {% endif %}
+        });
+
+        // Risk Analysis Chart Initialization
+        {% if result and result.risk_analysis %}
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Structural Integrity', 'Visual Defect Risk', 'Environmental Stress'],
+                    datasets: [{
+                        data: [
+                            {{ result.risk_analysis.integrity }},
+                    {{ result.risk_analysis.visual }},
+                                {{ result.risk_analysis.environmental }}
+                            ],
+            backgroundColor: [
+            '#10B981', // Green (Integrity)
+            '#EF4444', // Red (Visual Risk)
+            '#F59E0B'  // Orange (Env Risk)
+        ],
+            borderWidth: 0,
+            hoverOffset: 4
+                        }]
+                    },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: {
+                            family: "'Inter', sans-serif",
+                            size: 12
+                        },
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += context.parsed + '%';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
+            }
+        }
+                });
+            });
+        {% endif %}
+    </script>
+
+    <!-- Bounding Box Drawing Script -->
+    <script>
+        function drawBoundingBox() {
+            const canvas = document.getElementById('boundingBoxCanvas');
+            const img = document.getElementById('analyzedImage');
+
+            if (!canvas || !img) return;
+
+            // Set canvas size to match image
+            canvas.width = img.offsetWidth;
+            canvas.height = img.offsetHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Get Gemini data from template
+            {% if gemini_data and gemini_data.location %}
+            const location = {{ gemini_data.location | tojson
+        }};
+        const problem = "{{ gemini_data.problem }}";
+        const confidence = {{ gemini_data.confidence }};
+
+        // Check if location is valid (not all zeros)
+        if (location.x > 0 || location.y > 0 || location.width > 0 || location.height > 0) {
+            // Convert percentages to pixels
+            const x = location.x * canvas.width;
+            const y = location.y * canvas.height;
+            const width = location.width * canvas.width;
+            const height = location.height * canvas.height;
+
+            // Draw red rectangle
+            ctx.strokeStyle = '#EF4444';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, width, height);
+
+            // Draw semi-transparent fill
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+            ctx.fillRect(x, y, width, height);
+
+            // Draw label background
+            const labelText = `${problem} (${(confidence * 100).toFixed(0)}%)`;
+            ctx.font = 'bold 14px Arial';
+            const textWidth = ctx.measureText(labelText).width;
+            const labelX = x;
+            const labelY = y > 25 ? y - 5 : y + height + 20;
+
+            ctx.fillStyle = '#EF4444';
+            ctx.fillRect(labelX, labelY - 18, textWidth + 10, 22);
+
+            // Draw label text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(labelText, labelX + 5, labelY - 3);
+        }
+        {% endif %}
         }
 
-            // Redraw on window resize
-            window.addEventListener('resize', drawBoundingBox);
-        </script>
+        // Redraw on window resize
+        window.addEventListener('resize', drawBoundingBox);
+    </script>
 
 </body>
 

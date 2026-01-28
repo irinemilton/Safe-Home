@@ -300,6 +300,42 @@ def get_vision_prediction(image):
 def combine_predictions(sensor_risk, vision_severity, vision_defect, vision_confidence, temp, moisture):
     """Combine sensor and vision predictions safely"""
     
+    # Calculate Risk Scores for Chart based on Model Predictions
+    
+    # 1. Visual Defect Risk (Dynamic based on Model Confidence)
+    # Weight multipliers: Critical defects contribute 100% of their confidence to risk, minor ones less.
+    severity_weights = {
+        'critical': 1.0,  # Spalling/Major Cracks = Direct Risk
+        'warning': 0.6,   # Minor Cracks/Peeling = Moderate Risk
+        'notice': 0.2,    # Stains/Algae = Low Risk
+        'safe': 0.0,      # Normal = No Risk
+        'info': 0.0
+    }
+    
+    # visual_risk = Confidence * Severity Weight
+    # Example: 90% confidence Spalling -> 90 * 1.0 = 90% Risk
+    # Example: 90% confidence Stain    -> 90 * 0.2 = 18% Risk
+    weight = severity_weights.get(vision_severity, 0.0)
+    visual_risk_score = round(vision_confidence * weight, 1)
+
+    # 2. Environmental Risk (Sensor based)
+    # Fixed contributions based on sensor risk levels
+    env_risk_score = 0
+    if sensor_risk == 'high': env_risk_score = 25
+    elif sensor_risk == 'medium': env_risk_score = 10
+    elif sensor_risk == 'low': env_risk_score = 0
+    
+    # 3. Calculate Structural Integrity (Remaining percentage)
+    # Integrity is what's left after subtracting risks
+    total_risk = visual_risk_score + env_risk_score
+    structural_integrity = max(0, round(100 - total_risk, 1))
+
+    risk_analysis = {
+        'visual': visual_risk_score,
+        'environmental': env_risk_score,
+        'integrity': structural_integrity
+    }
+
     # --- CRITICAL FIX FOR CRASH ---
     # Handle case where vision model returned None (failed or not loaded)
     if vision_defect is None:
@@ -307,13 +343,15 @@ def combine_predictions(sensor_risk, vision_severity, vision_defect, vision_conf
             return {
                 'severity': 'info',
                 'title': 'Analysis Failed',
-                'message': f'Both models unavailable. Error: {vision_severity}'
+                'message': f'Both models unavailable. Error: {vision_severity}',
+                'risk_analysis': {'visual': 0, 'environmental': 0, 'integrity': 100}
             }
         # Sensor worked, Vision failed
         return {
             'severity': 'warning',
             'title': 'Partial Analysis (Sensor Only)',
-            'message': f'Vision unavailable: {vision_severity}\n\nEnvironment: {sensor_risk.upper()} risk (Temp: {temp}°C, Moisture: {moisture}%).'
+            'message': f'Vision unavailable: {vision_severity}\n\nEnvironment: {sensor_risk.upper()} risk (Temp: {temp}°C, Moisture: {moisture}%).',
+            'risk_analysis': {'visual': 0, 'environmental': env_risk_score, 'integrity': 100 - env_risk_score}
         }
     # -----------------------------
 
@@ -329,7 +367,8 @@ def combine_predictions(sensor_risk, vision_severity, vision_defect, vision_conf
         return {
             'severity': vision_severity,
             'title': f"{titles.get(vision_severity, 'INFO')} ({vision_confidence:.1f}%)",
-            'message': f"Defect detected: {vision_defect}. Sensor data unavailable."
+            'message': f"Defect detected: {vision_defect}. Sensor data unavailable.",
+            'risk_analysis': {'visual': visual_risk_score, 'environmental': 0, 'integrity': 100 - visual_risk_score}
         }
 
     # Both models worked
@@ -337,20 +376,23 @@ def combine_predictions(sensor_risk, vision_severity, vision_defect, vision_conf
         return {
             'severity': 'critical',
             'title': 'CRITICAL ALERT: Multiple Issues',
-            'message': f'Surface: {vision_defect.upper()} ({vision_confidence:.1f}%)\nEnvironment: {sensor_risk.upper()} risk (Temp: {temp}, Moist: {moisture})'
+            'message': f'Surface: {vision_defect.upper()} ({vision_confidence:.1f}%)\nEnvironment: {sensor_risk.upper()} risk (Temp: {temp}, Moist: {moisture})',
+            'risk_analysis': risk_analysis
         }
     
     if sensor_risk == "medium" or vision_severity == "warning":
         return {
             'severity': 'warning',
             'title': 'WARNING: Structural Concerns',
-            'message': f'Surface: {vision_defect} ({vision_confidence:.1f}%)\nEnvironment: {sensor_risk} risk.'
+            'message': f'Surface: {vision_defect} ({vision_confidence:.1f}%)\nEnvironment: {sensor_risk} risk.',
+            'risk_analysis': risk_analysis
         }
 
     return {
         'severity': 'safe',
         'title': 'SAFE: Structure Healthy',
-        'message': f'Surface: {vision_defect} ({vision_confidence:.1f}%)\nEnvironment: Stable.'
+        'message': f'Surface: {vision_defect} ({vision_confidence:.1f}%)\nEnvironment: Stable.',
+        'risk_analysis': risk_analysis
     }
 
 # --- ROUTES ---
